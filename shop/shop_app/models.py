@@ -26,6 +26,13 @@ class Category(models.Model):
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
 
+class Size(models.Model):
+    size = models.CharField(max_length=10, verbose_name="Размер")
+
+    class Meta:
+        verbose_name = "Размер"
+        verbose_name_plural = "Размеры"
+
 
 class Product(models.Model):
     GENDER_CHOICES = [
@@ -40,7 +47,6 @@ class Product(models.Model):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, verbose_name="Пол")
     color = models.CharField(max_length=50, verbose_name="Цвет")
     quantity_pairs = models.PositiveIntegerField(default=0, verbose_name="Количество пар")
-    size = models.CharField(max_length=10, verbose_name="Размер")
     category = models.ForeignKey(Category, on_delete=models.CASCADE, verbose_name="Категория")
 
     def __str__(self):
@@ -50,6 +56,16 @@ class Product(models.Model):
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
 
+class Size_Product(models.Model):
+    size = models.ForeignKey(Size, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.size} - {self.product}"
+    
+    class Meta:
+        verbose_name = "Размер-Товар"
+        verbose_name_plural = "Размер-Товары"
 
 class Address(models.Model):
     name = models.TextField(verbose_name="Адрес")
