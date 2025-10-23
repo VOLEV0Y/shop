@@ -3,15 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block head%}{% endblock %}</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <title>ВРАТ - Магазин обуви</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
-    <header>...</header>
+    <header>
+        <div class="header">
+            <h1>ВРАТ</h1>
+            <div class="nav">
+                <span>ЖЕНЩИНАМ</span>
+                <span>МУЖЧИНАМ</span>
+            </div>
+            <div class="search">Что будем искать?</div>
+        </div>
+    </header>
+
     <main>
-        {% block main %}
+        {% block content %}
         {% endblock %}
     </main>
-    <footer>...</footer>
+
+    <footer>
+        <div class="footer">
+            <h2>ВРАТ</h2>
+            <div class="footer-content">
+                <div class="footer-left">
+                    <p>© 2025 Все права защищены</p>
+                    <p>ООО «БРАТ привыка обуви».</p>
+                </div>
+                <div class="footer-center">
+                    <p>Мы в соцсетях:</p>
+                    <p>Ibra@gmail.com</p>
+                    <p>+7 (499) 521-71-14</p>
+                </div>
+                <div class="footer-right">
+                    <p>Мы в соцсетях:</p>
+                    <div class="payment-icons">
+                        <span>VISA</span>
+                        <span>МИР</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

@@ -1,6 +1,5 @@
-from django.shortcuts import render, HttpResponse
-from .models import *
+from django.shortcuts import render
+from .models import Product
 
-# Create your views here.
-def index(request):
-    return render(request, "main-catalog.html")
+def main_page(request):
+    return render(request, 'home.html')
