@@ -128,7 +128,7 @@ class Order(models.Model):
         return sum(item.total_price() for item in self.order_items.all())
 
     def save(self, *args, **kwargs):
-        self.total_price = self.calculate_total_price()
+        self.total_price = self.calculate_total_price() 
         super().save(*args, **kwargs)
 
     class Meta:
