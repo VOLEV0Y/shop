@@ -162,6 +162,11 @@ class Order(models.Model):
     def __str__(self):
         return f"Заказ #{self.id} - {self.user.nickname}"
 
+    def save(self, *args, **kwargs):
+        if not self.total_price and self.cart:
+            self.total_price = self.cart.total_price()
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
