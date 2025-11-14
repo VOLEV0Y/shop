@@ -106,7 +106,7 @@ class PaymentMethod(models.Model):
 
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True, verbose_name="Дата создания")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
     is_active = models.BooleanField(default=True, verbose_name="Активная корзина")
 
@@ -114,7 +114,12 @@ class Cart(models.Model):
         return f"Корзина {self.user.nickname}"
 
     def total_price(self):
-        return sum(item.total_price() for item in self.items.all())
+        """Общая стоимость товаров в корзине"""
+        return sum(item.total_price() for item in self.cartitem_set.all())
+
+    def total_with_delivery(self):
+        """Общая стоимость с доставкой"""
+        return self.total_price() + 5000
 
     class Meta:
         verbose_name = "Корзина"
@@ -122,7 +127,6 @@ class Cart(models.Model):
 
 
 class CartItem(models.Model):
-    """Товар в корзине"""
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items', verbose_name="Корзина")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
     size = models.ForeignKey(Size, on_delete=models.CASCADE, verbose_name="Размер")
@@ -151,20 +155,27 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, verbose_name="Корзина")
     address = models.ForeignKey(Address, on_delete=models.CASCADE, verbose_name="Адрес доставки")
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.CASCADE, verbose_name="Способ оплаты")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Статус")
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Общая стоимость")
+    delivery_cost = models.DecimalField(max_digits=10, decimal_places=2, default=5000, verbose_name="Стоимость доставки")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    cart = models.OneToOneField(Cart, on_delete=models.CASCADE, verbose_name="Корзина", null=True, blank=True, related_name='order')
 
     def __str__(self):
         return f"Заказ #{self.id} - {self.user.nickname}"
 
+    def calculate_total(self):
+        cart_items_total = 0
+        if self.cart:
+            cart_items_total = self.cart.total_price()
+        return cart_items_total + self.delivery_cost
+
     def save(self, *args, **kwargs):
-        if not self.total_price and self.cart:
-            self.total_price = self.cart.total_price()
+        if not self.total_price or self._state.adding:
+            self.total_price = self.calculate_total()
         super().save(*args, **kwargs)
 
     class Meta:
