@@ -1,0 +1,61 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block content %}
+<div class="assortment">
+    <h2>КОРЗИНА</h2>
+    
+    {% if cart_items %}
+        {% for item in cart_items %}
+        <div class="cart-item">
+            <div class="cart-item-image">
+                {% if "мафиози" in item.product.name.lower %}
+                    <img src="{% static 'images/spartan.jpg' %}" alt="{{ item.product.name }}">
+                {% elif "великий" in item.product.name.lower %}
+                    <img src="{% static 'images/tovar2.jpeg' %}" alt="{{ item.product.name }}">
+                {% elif "джордан" in item.product.name.lower %}
+                    <img src="{% static 'images/tovar3.jpg' %}" alt="{{ item.product.name }}">
+                {% elif "изумрудные" in item.product.name.lower %}
+                    <img src="{% static 'images/tovar4.jpg' %}" alt="{{ item.product.name }}">
+                {% else %}
+                    <img src="{% static 'images/spartan.jpg' %}" alt="{{ item.product.name }}">
+                {% endif %}
+            </div>
+            <div class="cart-item-details">
+                <h4>{{ item.product.name }}</h4>
+                <p>Цена: {{ item.product.price }} ₽</p>
+                <div class="quantity-controls">
+                    <span>Количество: </span>
+                    <a href="{% url 'decrease_cart_item' item.product.id %}" class="quantity-btn">-</a>
+                    <span class="quantity">{{ item.quantity }}</span>
+                    <a href="{% url 'increase_cart_item' item.product.id %}" class="quantity-btn">+</a>
+                </div>
+                <p>Сумма: {{ item.total_price }} ₽</p>
+            </div>
+            <div class="cart-item-actions">
+                <a href="{% url 'remove_from_cart' item.product.id %}" class="remove-btn">Удалить</a>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="cart-total">
+            Общая сумма: {{ total_price }} ₽
+        </div>
+        
+        <div class="cart-actions">
+            <a href="{% url 'clear_cart' %}" class="clear-cart-btn">Очистить корзину</a>
+            
+            {% if user.is_authenticated %}
+                <a href="/checkout/" class="checkout-btn">ОФОРМИТЬ ЗАКАЗ</a>
+            {% else %}
+                <a href="/admin/login/?next=/cart/" class="checkout-btn">ВОЙТИ ДЛЯ ОФОРМЛЕНИЯ</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p style="text-align: center; font-size: 18px; color: #666; padding: 40px;">Ваша корзина пуста</p>
+        <div style="text-align: center;">
+            <a href="/" class="continue-shopping-btn">Продолжить покупки</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

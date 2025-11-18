@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from decimal import Decimal
 
 class User(models.Model):
     nickname = models.CharField(max_length=50, unique=True, verbose_name="Никнейм")
@@ -114,12 +115,13 @@ class Cart(models.Model):
         return f"Корзина {self.user.nickname}"
 
     def total_price(self):
-        """Общая стоимость товаров в корзине"""
-        return sum(item.total_price() for item in self.cartitem_set.all())
+        total = Decimal(0)
+        for item in self.items.all():
+            total += item.total_price()
+        return total
 
     def total_with_delivery(self):
-        """Общая стоимость с доставкой"""
-        return self.total_price() + 5000
+        return self.total_price() + Decimal('5000.00')
 
     class Meta:
         verbose_name = "Корзина"
@@ -158,7 +160,7 @@ class Order(models.Model):
     address = models.ForeignKey(Address, on_delete=models.CASCADE, verbose_name="Адрес доставки")
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.CASCADE, verbose_name="Способ оплаты")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Статус")
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Общая стоимость")
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Общая стоимость", editable=False)
     delivery_cost = models.DecimalField(max_digits=10, decimal_places=2, default=5000, verbose_name="Стоимость доставки")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
@@ -168,14 +170,13 @@ class Order(models.Model):
         return f"Заказ #{self.id} - {self.user.nickname}"
 
     def calculate_total(self):
-        cart_items_total = 0
+        cart_items_total = Decimal(0)
         if self.cart:
             cart_items_total = self.cart.total_price()
         return cart_items_total + self.delivery_cost
 
     def save(self, *args, **kwargs):
-        if not self.total_price or self._state.adding:
-            self.total_price = self.calculate_total()
+        self.total_price = self.calculate_total()
         super().save(*args, **kwargs)
 
     class Meta:
