@@ -24,7 +24,6 @@
     <div class="products">
         {% for product in products %}
         <div class="product">
-            <!-- Убрали красный кружочек -->
             <div class="product-image">
                 {% if "мафиози" in product.name.lower %}
                     <img src="{% static 'images/spartan.jpg' %}" alt="{{ product.name }}">

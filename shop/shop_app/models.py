@@ -2,6 +2,23 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 
+
+# ===== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (расширение стандартного auth.User) =====
+
+class UserProfile(models.Model):
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile', verbose_name="Пользователь")
+    phone = models.CharField(max_length=30, blank=True, verbose_name="Телефон")
+
+    def __str__(self):
+        return f"Профиль {self.user.username}"
+
+    class Meta:
+        verbose_name = "Профиль пользователя"
+        verbose_name_plural = "Профили пользователей"
+
+
+# ===== ОРИГИНАЛЬНЫЕ МОДЕЛИ МАГАЗИНА (не трогаем) =====
+
 class User(models.Model):
     nickname = models.CharField(max_length=50, unique=True, verbose_name="Никнейм")
     email = models.EmailField(unique=True, verbose_name="Почта")
@@ -13,8 +30,8 @@ class User(models.Model):
         return f"{self.nickname} ({self.email})"
 
     class Meta:
-        verbose_name = "Пользователь"
-        verbose_name_plural = "Пользователи"
+        verbose_name = "Пользователь (магазин)"
+        verbose_name_plural = "Пользователи (магазин)"
 
 
 class Category(models.Model):
@@ -182,3 +199,21 @@ class Order(models.Model):
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
+
+
+# ===== МУЗЫКАЛЬНЫЙ ПЛЕЕР =====
+
+class MusicTrack(models.Model):
+    title = models.CharField(max_length=200, verbose_name="Название трека")
+    file = models.FileField(upload_to='music/', verbose_name="MP3 файл")
+    order = models.PositiveIntegerField(default=0, verbose_name="Порядок воспроизведения")
+    is_active = models.BooleanField(default=True, verbose_name="Активный")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата добавления")
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = "Музыкальный трек"
+        verbose_name_plural = "Музыкальные треки"
+        ordering = ['order', 'created_at']

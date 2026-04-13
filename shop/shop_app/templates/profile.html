@@ -1,0 +1,125 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block content %}
+<div class="assortment" style="max-width: 860px;">
+    <h2>МОЙ ПРОФИЛЬ</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px;
+                background:{% if message.tags == 'error' %}#fff0f0; border:1px solid #ffcccc; color:#cc0000{% else %}#f0fff0; border:1px solid #ccffcc; color:#006600{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="display:flex; gap:40px; flex-wrap:wrap; margin-top:30px;">
+
+        <!-- Аватар -->
+        <div style="flex:0 0 auto; text-align:center;">
+            <div style="width:110px; height:110px; border-radius:50%; background:black; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+                <span style="color:white; font-size:42px; font-weight:bold; letter-spacing:-2px;">
+                    {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                </span>
+            </div>
+            <p style="font-weight:bold; font-size:17px;">{{ user.first_name }} {{ user.last_name }}</p>
+            <p style="color:#888; font-size:13px;">@{{ user.username }}</p>
+            {% if user.is_superuser %}
+                <span style="display:inline-block; background:black; color:white; padding:3px 12px; border-radius:20px; font-size:11px; margin-top:8px; letter-spacing:1px;">ADMIN</span>
+            {% endif %}
+        </div>
+
+        <!-- Основной блок -->
+        <div style="flex:1; min-width:280px;">
+
+            <!-- Режим просмотра -->
+            <div id="view-mode">
+                <div style="border:2px solid #eee; border-radius:10px; padding:25px; margin-bottom:20px;">
+                    <h3 style="font-size:14px; letter-spacing:1px; text-transform:uppercase; margin-bottom:20px; border-bottom:2px solid black; padding-bottom:10px;">Данные аккаунта</h3>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div>
+                            <p style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:4px;">Логин</p>
+                            <p style="font-weight:bold;">{{ user.username }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:4px;">Email</p>
+                            <p style="font-weight:bold;">{{ user.email|default:"—" }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:4px;">Имя</p>
+                            <p style="font-weight:bold;">{{ user.first_name|default:"—" }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:4px;">Фамилия</p>
+                            <p style="font-weight:bold;">{{ user.last_name|default:"—" }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:4px;">Телефон</p>
+                            <p style="font-weight:bold;">{{ user.profile.phone|default:"—" }}</p>
+                        </div>
+                        <div>
+                            <p style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:4px;">Дата регистрации</p>
+                            <p style="font-weight:bold;">{{ user.date_joined|date:"d.m.Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопки -->
+                <div class="profile-btns">
+                    <a href="/cart/" class="profile-action-btn profile-action-btn--black">МОЯ КОРЗИНА</a>
+                    {% if user.is_superuser %}
+                        <a href="/admin/" class="profile-action-btn profile-action-btn--dark">ПАНЕЛЬ ADMIN</a>
+                    {% endif %}
+                    <button onclick="document.getElementById('view-mode').style.display='none'; document.getElementById('edit-mode').style.display='block';"
+                            class="profile-action-btn profile-action-btn--outline">ИЗМЕНИТЬ</button>
+                    <a href="/logout/" class="profile-action-btn profile-action-btn--outline">ВЫЙТИ</a>
+                </div>
+            </div>
+
+            <!-- Режим редактирования -->
+            <div id="edit-mode" style="display:none;">
+                <form method="post" action="/profile/update/">
+                    {% csrf_token %}
+                    <div style="border:2px solid black; border-radius:10px; padding:25px; margin-bottom:20px;">
+                        <h3 style="font-size:14px; letter-spacing:1px; text-transform:uppercase; margin-bottom:20px; border-bottom:2px solid black; padding-bottom:10px;">Редактирование профиля</h3>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                            <div>
+                                <label class="edit-label">Имя</label>
+                                <input class="edit-input" type="text" name="first_name" value="{{ user.first_name }}" placeholder="Имя">
+                            </div>
+                            <div>
+                                <label class="edit-label">Фамилия</label>
+                                <input class="edit-input" type="text" name="last_name" value="{{ user.last_name }}" placeholder="Фамилия">
+                            </div>
+                            <div>
+                                <label class="edit-label">Email</label>
+                                <input class="edit-input" type="email" name="email" value="{{ user.email }}" placeholder="Email">
+                            </div>
+                            <div>
+                                <label class="edit-label">Телефон</label>
+                                <input class="edit-input" type="text" name="phone" value="{{ user.profile.phone|default:'' }}" placeholder="+7 (999) 000-00-00">
+                            </div>
+                            <div>
+                                <label class="edit-label">Новый пароль</label>
+                                <input class="edit-input" type="password" name="password1" placeholder="Оставьте пустым если не менять">
+                            </div>
+                            <div>
+                                <label class="edit-label">Повторите пароль</label>
+                                <input class="edit-input" type="password" name="password2" placeholder="Повторите пароль">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-btns">
+                        <button type="submit" class="profile-action-btn profile-action-btn--black">СОХРАНИТЬ</button>
+                        <button type="button"
+                                onclick="document.getElementById('edit-mode').style.display='none'; document.getElementById('view-mode').style.display='block';"
+                                class="profile-action-btn profile-action-btn--outline">ОТМЕНА</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
