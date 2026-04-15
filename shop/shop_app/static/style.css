@@ -11,7 +11,6 @@ body {
     line-height: 1.6;
 }
 
-/* ===== HEADER ===== */
 .header {
     background: black;
     color: white;
@@ -50,7 +49,6 @@ body {
     font-weight: bold;
 }
 
-/* Навигация */
 .nav {
     display: flex;
     gap: 24px;
@@ -115,7 +113,6 @@ body {
     color: black;
 }
 
-/* ===== НОВЫЕ КНОПКИ ШАПКИ ===== */
 .header-btn {
     display: flex;
     align-items: center;
@@ -156,7 +153,6 @@ body {
     border-color: white;
 }
 
-/* Бейдж корзины */
 .cart-badge {
     position: absolute;
     top: -6px;
@@ -179,7 +175,6 @@ body {
     color: white;
 }
 
-/* ===== HERO ===== */
 .hero {
     padding: 40px 20px;
     background: white;
@@ -226,7 +221,6 @@ body {
     text-align: center;
 }
 
-/* ===== АССОРТИМЕНТ ===== */
 .assortment {
     padding: 40px 20px;
     background: white;
@@ -327,7 +321,6 @@ body {
     color: black;
 }
 
-/* ===== FOOTER ===== */
 footer {
     background: black;
     color: white;
@@ -411,7 +404,6 @@ footer {
     display: block;
 }
 
-/* ===== КОРЗИНА ===== */
 .cart-item {
     display: flex;
     gap: 20px;
@@ -528,7 +520,6 @@ footer {
     color: black;
 }
 
-/* ===== КОЛИЧЕСТВО В КОРЗИНЕ ===== */
 .quantity-controls {
     display: flex;
     align-items: center;
@@ -563,7 +554,6 @@ footer {
     text-align: center;
 }
 
-/* ===== МУЗЫКАЛЬНЫЙ ПЛЕЕР ===== */
 #music-player {
     position: fixed;
     bottom: 28px;
@@ -621,7 +611,6 @@ footer {
     background: rgba(255,255,255,0.25);
 }
 
-/* Слайдер громкости */
 .player-volume {
     flex: 1;
     -webkit-appearance: none;
@@ -657,120 +646,120 @@ footer {
     border: none;
 }
 
-        body { background: #f0f0f0; }
+body { background: #f0f0f0; }
 
-        .auth-page {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
-        }
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
 
-        .auth-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
-            padding: 48px 42px;
-            width: 100%;
-            max-width: 440px;
-        }
+.auth-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+    padding: 48px 42px;
+    width: 100%;
+    max-width: 440px;
+}
 
-        .auth-title {
-            font-size: 30px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 8px;
-            letter-spacing: 3px;
-        }
+.auth-title {
+    font-size: 30px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: 3px;
+}
 
-        .auth-subtitle {
-            text-align: center;
-            color: #888;
-            margin-bottom: 32px;
-            font-size: 14px;
-        }
+.auth-subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 32px;
+    font-size: 14px;
+}
 
-        .form-group { margin-bottom: 16px; }
+.form-group { margin-bottom: 16px; }
 
-        .form-group label {
-            display: block;
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 6px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: #333;
-        }
+.form-group label {
+    display: block;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #333;
+}
 
-        .form-group input {
-            display: block;
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 7px;
-            font-size: 15px;
-            font-family: Arial, sans-serif;
-            transition: border-color 0.2s;
-            box-sizing: border-box;
-        }
+.form-group input {
+    display: block;
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 7px;
+    font-size: 15px;
+    font-family: Arial, sans-serif;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
 
-        .form-group input:focus {
-            outline: none;
-            border-color: black;
-        }
+.form-group input:focus {
+    outline: none;
+    border-color: black;
+}
 
-        .auth-btn {
-            width: 100%;
-            padding: 14px;
-            background: black;
-            color: white;
-            border: 2px solid black;
-            border-radius: 7px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            letter-spacing: 1px;
-            transition: all 0.25s ease;
-            margin-top: 8px;
-        }
+.auth-btn {
+    width: 100%;
+    padding: 14px;
+    background: black;
+    color: white;
+    border: 2px solid black;
+    border-radius: 7px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.25s ease;
+    margin-top: 8px;
+}
 
-        .auth-btn:hover { background: white; color: black; }
+.auth-btn:hover { background: white; color: black; }
 
-        .auth-links {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 14px;
-            color: #666;
-        }
+.auth-links {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 14px;
+    color: #666;
+}
 
-        .auth-links a {
-            color: black;
-            font-weight: bold;
-            text-decoration: none;
-            border-bottom: 1px solid black;
-        }
+.auth-links a {
+    color: black;
+    font-weight: bold;
+    text-decoration: none;
+    border-bottom: 1px solid black;
+}
 
-        .divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 22px 0;
-        }
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0;
+}
 
-        .divider hr { flex:1; border:none; border-top:1px solid #e0e0e0; }
-        .divider span { color: #bbb; font-size: 13px; }
+.divider hr { flex:1; border:none; border-top:1px solid #e0e0e0; }
+.divider span { color: #bbb; font-size: 13px; }
 
-        .error-msg {
-            background: #fff0f0;
-            border: 1px solid #ffcccc;
-            color: #cc0000;
-            padding: 10px 14px;
-            border-radius: 6px;
-            margin-bottom: 18px;
-            font-size: 14px;
-        }
+.error-msg {
+    background: #fff0f0;
+    border: 1px solid #ffcccc;
+    color: #cc0000;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    font-size: 14px;
+}
 
 .profile-btns {
     display: flex;

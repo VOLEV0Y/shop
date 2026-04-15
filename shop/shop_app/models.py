@@ -2,9 +2,6 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 
-
-# ===== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (расширение стандартного auth.User) =====
-
 class UserProfile(models.Model):
     user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile', verbose_name="Пользователь")
     phone = models.CharField(max_length=30, blank=True, verbose_name="Телефон")
@@ -15,9 +12,6 @@ class UserProfile(models.Model):
     class Meta:
         verbose_name = "Профиль пользователя"
         verbose_name_plural = "Профили пользователей"
-
-
-# ===== ОРИГИНАЛЬНЫЕ МОДЕЛИ МАГАЗИНА (не трогаем) =====
 
 class User(models.Model):
     nickname = models.CharField(max_length=50, unique=True, verbose_name="Никнейм")
@@ -199,9 +193,6 @@ class Order(models.Model):
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
-
-
-# ===== МУЗЫКАЛЬНЫЙ ПЛЕЕР =====
 
 class MusicTrack(models.Model):
     title = models.CharField(max_length=200, verbose_name="Название трека")

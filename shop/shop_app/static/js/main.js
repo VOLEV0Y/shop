@@ -1,14 +1,3 @@
-// ============================================================
-// BRAT — главный JS файл
-// ============================================================
-
-
-// ============================================================
-// МУЗЫКАЛЬНЫЙ ПЛЕЕР
-// Сохраняет трек и позицию через sessionStorage, чтобы музыка
-// продолжалась при переходе между страницами сайта.
-// ============================================================
-
 (function () {
     var tracks = window.BRAT_TRACKS || [];
     if (tracks.length === 0) return;
@@ -23,7 +12,6 @@
         paused: false
     };
 
-    // Восстанавливаем состояние из sessionStorage
     try {
         var saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY));
         if (saved) {
@@ -115,26 +103,22 @@
         saveState();
     }
 
-    // Сохраняем позицию перед уходом со страницы
     window.addEventListener('beforeunload', function () {
         state.paused = audio.paused;
         saveState();
     });
 
-    // Обновляем время каждую секунду
     setInterval(function () {
         if (!audio.paused) saveState();
     }, 1000);
 
     audio.addEventListener('ended', nextTrack);
 
-    // Экспорт для onclick в HTML
     window.bratNextTrack  = nextTrack;
     window.bratToggleMute = toggleMute;
     window.bratTogglePause = togglePause;
     window.bratSetVolume  = setVolume;
 
-    // Запуск
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             loadTrack(state.index, state.time, true);

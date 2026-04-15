@@ -113,8 +113,6 @@ def clear_cart(request):
     return redirect('/cart/')
 
 
-# ===== АВТОРИЗАЦИЯ =====
-
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('/profile/')
@@ -127,7 +125,6 @@ def login_view(request):
             messages.error(request, 'Введите логин и пароль')
             return render(request, 'login.html', {'music_tracks': get_music_tracks()})
 
-        # Автосоздание суперпользователя admin/admin
         if username == 'admin' and password == 'admin':
             admin_user, created = AuthUser.objects.get_or_create(username='admin')
             if created or not admin_user.is_superuser:
@@ -174,7 +171,6 @@ def register_view(request):
                 username=username, email=email, password=password1,
                 first_name=first_name, last_name=last_name,
             )
-            # Сохраняем телефон в профиль
             profile, _ = UserProfile.objects.get_or_create(user=user)
             profile.phone = phone
             profile.save()
@@ -188,7 +184,6 @@ def register_view(request):
 @login_required(login_url='/login/')
 def profile_view(request):
     cart = request.session.get('cart', {})
-    # Создаём профиль если его нет
     UserProfile.objects.get_or_create(user=request.user)
     context = {
         'cart_items_count': sum(cart.values()),
@@ -210,12 +205,10 @@ def profile_update(request):
     password1  = request.POST.get('password1', '')
     password2  = request.POST.get('password2', '')
 
-    # Проверка email на уникальность (кроме своего)
     if email and AuthUser.objects.filter(email=email).exclude(pk=user.pk).exists():
         messages.error(request, 'Этот email уже используется')
         return redirect('/profile/')
 
-    # Проверка пароля
     if password1:
         if password1 != password2:
             messages.error(request, 'Пароли не совпадают')
@@ -224,7 +217,7 @@ def profile_update(request):
             messages.error(request, 'Пароль должен быть не менее 4 символов')
             return redirect('/profile/')
         user.set_password(password1)
-        update_session_auth_hash(request, user)  # не разлогиниваем
+        update_session_auth_hash(request, user)
 
     if first_name: user.first_name = first_name
     if last_name:  user.last_name  = last_name
