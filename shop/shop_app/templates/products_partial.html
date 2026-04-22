@@ -1,0 +1,35 @@
+{% load static %}
+<div class="products">
+    {% for product in products %}
+    <div class="product">
+        <div class="product-image">
+            {% if "мафиози" in product.name.lower %}
+                <img src="{% static 'images/spartan.jpg' %}" alt="{{ product.name }}">
+            {% elif "великий" in product.name.lower %}
+                <img src="{% static 'images/tovar2.jpeg' %}" alt="{{ product.name }}">
+            {% elif "джордан" in product.name.lower %}
+                <img src="{% static 'images/tovar3.jpg' %}" alt="{{ product.name }}">
+            {% elif "изумрудные" in product.name.lower %}
+                <img src="{% static 'images/tovar4.jpg' %}" alt="{{ product.name }}">
+            {% else %}
+                <img src="{% static 'images/spartan.jpg' %}" alt="{{ product.name }}">
+            {% endif %}
+        </div>
+        <div class="prices">
+            <span class="new-price">{{ product.price }} ₽</span>
+        </div>
+        <h4>{{ product.name }}</h4>
+        <p class="product-material">Материал: {{ product.material }}</p>
+        <p class="product-color">Цвет: {{ product.color }}</p>
+        <form method="post" action="/add-to-cart/">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <button type="submit" class="add-to-cart">В КОРЗИНУ</button>
+        </form>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+        <p style="font-size: 18px; color: #666;">Товары не найдены</p>
+    </div>
+    {% endfor %}
+</div>

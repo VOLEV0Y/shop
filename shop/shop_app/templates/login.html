@@ -1,76 +1,36 @@
+{% extends "main.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BRAT — Вход</title>
-    <link rel="stylesheet" href="{% static 'style.css' %}">
-</head>
-<body>
-    <header>
-        <div class="header" style="justify-content:space-between;">
-            <div class="logo-section">
-                <div class="logo">
-                    <img src="{% static 'images/logo.jpeg' %}" alt="BRAT">
-                </div>
-                <h1><a href="/" style="text-decoration:none; color:inherit;">BRAT</a></h1>
+
+{% block content %}
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-title">BRAT</div>
+        <p class="auth-subtitle">Войдите в свой аккаунт</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-msg">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" action="/login/">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Логин</label>
+                <input type="text" name="username" placeholder="Введите логин" required autocomplete="username">
             </div>
-            <div class="header-actions">
-                <a href="/cart/" class="header-btn header-btn--cart">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-14.2-14H1V2H0v2h2l3.6 7.6L4.2 14c-.2.3-.2.7-.2 1 0 1.1.9 2 2 2h14v-2H6.4c-.1 0-.2-.1-.2-.2l.1-.3.9-1.5H19c.7 0 1.4-.4 1.7-1l3.5-6.4c.4-.6 0-1.4-.7-1.4H5.2z"/></svg>
-                    КОРЗИНА
-                </a>
+            <div class="form-group">
+                <label>Пароль</label>
+                <input type="password" name="password" placeholder="Введите пароль" required autocomplete="current-password">
             </div>
-        </div>
-    </header>
+            <button type="submit" class="auth-btn">ВОЙТИ</button>
+        </form>
 
-    <main class="auth-page">
-        <div class="auth-container">
-            <div class="auth-title">BRAT</div>
-            <p class="auth-subtitle">Войдите в свой аккаунт</p>
+        <div class="divider"><hr><span>или</span><hr></div>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="error-msg">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-
-            <form method="post" action="/login/">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label>Логин</label>
-                    <input type="text" name="username" placeholder="Введите логин" required autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label>Пароль</label>
-                    <input type="password" name="password" placeholder="Введите пароль" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="auth-btn">ВОЙТИ</button>
-            </form>
-
-            <div class="divider"><hr><span>или</span><hr></div>
-
-            <div class="auth-links">
-                Нет аккаунта? <a href="/register/">Зарегистрироваться</a>
-            </div>
-        </div>
-    </main>
-
-    {% if music_tracks %}
-    <div id="music-player">
-        <div class="player-track-name" id="track-name">...</div>
-        <div class="player-controls">
-            <button id="pause-btn" class="player-btn" onclick="bratTogglePause()" title="Пауза">⏸</button>
-            <button id="next-btn" class="player-btn" onclick="bratNextTrack()" title="Следующий">⏭</button>
-            <button id="mute-btn" class="player-btn" onclick="bratToggleMute()" title="Звук">🔊</button>
-            <input type="range" id="vol-slider" class="player-volume" min="0" max="1" step="0.05" value="0.5" oninput="bratSetVolume(this.value)">
+        <div class="auth-links">
+            Нет аккаунта? <a href="/register/">Зарегистрироваться</a>
         </div>
     </div>
-    <script>
-        window.BRAT_TRACKS = [{% for t in music_tracks %}{"url":"{{ t.file.url }}","name":"{{ t.title }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
-    </script>
-    {% endif %}
-    <script src="{% static 'js/main.js' %}"></script>
-</body>
-</html>
+</div>
+{% endblock %}

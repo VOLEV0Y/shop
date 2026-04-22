@@ -1,7 +1,4 @@
-{% extends "main.html" %}
 {% load static %}
-
-{% block content %}
 <div class="assortment">
     {% if cart_items %}
         {% for item in cart_items %}
@@ -56,4 +53,3 @@
         </div>
     {% endif %}
 </div>
-{% endblock %}

@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.models import User as AuthUser
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse
 from .models import Product, Category, MusicTrack, UserProfile
 
 
@@ -33,6 +34,9 @@ def main_page(request):
     cart = request.session.get('cart', {})
     cart_items_count = sum(cart.values())
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'products_partial.html', {'products': products})
+
     context = {
         'products': products,
         'categories': categories,
@@ -56,6 +60,15 @@ def cart_view(request):
         except Product.DoesNotExist:
             continue
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        if request.GET.get('count_only'):
+            return JsonResponse({'cart_count': sum(cart.values())})
+        return render(request, 'cart_partial.html', {
+            'cart_items': cart_items,
+            'total_price': total_price,
+            'cart_items_count': sum(cart.values()),
+        })
+
     context = {
         'cart_items': cart_items,
         'total_price': total_price,
@@ -71,18 +84,26 @@ def add_to_cart(request):
         try:
             Product.objects.get(id=product_id, is_active=True)
         except Product.DoesNotExist:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Товар не найден'})
             return redirect('/')
         cart = request.session.get('cart', {})
         cart[product_id] = cart.get(product_id, 0) + 1
         request.session['cart'] = cart
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
     return redirect('/')
 
 
 def increase_cart_item(request, product_id):
     cart = request.session.get('cart', {})
-    if str(product_id) in cart:
-        cart[str(product_id)] += 1
+    key = str(product_id)
+    if key in cart:
+        cart[key] += 1
         request.session['cart'] = cart
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
     return redirect('/cart/')
 
 
@@ -95,6 +116,8 @@ def decrease_cart_item(request, product_id):
         else:
             del cart[key]
         request.session['cart'] = cart
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
     return redirect('/cart/')
 
 
@@ -104,12 +127,16 @@ def remove_from_cart(request, product_id):
     if key in cart:
         del cart[key]
         request.session['cart'] = cart
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
     return redirect('/cart/')
 
 
 def clear_cart(request):
     if 'cart' in request.session:
         del request.session['cart']
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'cart_count': 0})
     return redirect('/cart/')
 
 
@@ -122,6 +149,8 @@ def login_view(request):
         password = request.POST.get('password', '').strip()
 
         if not username or not password:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Введите логин и пароль'})
             messages.error(request, 'Введите логин и пароль')
             return render(request, 'login.html', {'music_tracks': get_music_tracks()})
 
@@ -136,8 +165,12 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
             return redirect('/profile/')
         else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Неверный логин или пароль'})
             messages.error(request, 'Неверный логин или пароль')
 
     return render(request, 'login.html', {'music_tracks': get_music_tracks()})
@@ -156,16 +189,26 @@ def register_view(request):
         password1  = request.POST.get('password1', '')
         password2  = request.POST.get('password2', '')
 
-        if not all([username, email, first_name, last_name, password1, password2]):
-            messages.error(request, 'Заполните все обязательные поля')
+        error = None
+        if not username:
+            error = 'Введите логин'
+        elif not email:
+            error = 'Введите email'
+        elif not password1 or not password2:
+            error = 'Введите пароль'
         elif password1 != password2:
-            messages.error(request, 'Пароли не совпадают')
+            error = 'Пароли не совпадают'
         elif len(password1) < 4:
-            messages.error(request, 'Пароль должен быть не менее 4 символов')
+            error = 'Пароль должен быть не менее 4 символов'
         elif AuthUser.objects.filter(username=username).exists():
-            messages.error(request, 'Пользователь с таким логином уже существует')
+            error = 'Пользователь с таким логином уже существует'
         elif AuthUser.objects.filter(email=email).exists():
-            messages.error(request, 'Email уже используется')
+            error = 'Email уже используется'
+
+        if error:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': error})
+            messages.error(request, error)
         else:
             user = AuthUser.objects.create_user(
                 username=username, email=email, password=password1,
@@ -174,8 +217,9 @@ def register_view(request):
             profile, _ = UserProfile.objects.get_or_create(user=user)
             profile.phone = phone
             profile.save()
-
             login(request, user)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
             return redirect('/profile/')
 
     return render(request, 'register.html', {'music_tracks': get_music_tracks()})
@@ -206,14 +250,20 @@ def profile_update(request):
     password2  = request.POST.get('password2', '')
 
     if email and AuthUser.objects.filter(email=email).exclude(pk=user.pk).exists():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': 'Этот email уже используется'})
         messages.error(request, 'Этот email уже используется')
         return redirect('/profile/')
 
     if password1:
         if password1 != password2:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Пароли не совпадают'})
             messages.error(request, 'Пароли не совпадают')
             return redirect('/profile/')
         if len(password1) < 4:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Пароль должен быть не менее 4 символов'})
             messages.error(request, 'Пароль должен быть не менее 4 символов')
             return redirect('/profile/')
         user.set_password(password1)
@@ -228,6 +278,8 @@ def profile_update(request):
     profile.phone = phone
     profile.save()
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True})
     messages.success(request, 'Профиль успешно обновлён!')
     return redirect('/profile/')
 
