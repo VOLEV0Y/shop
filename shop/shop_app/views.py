@@ -1,289 +1,199 @@
-from django.shortcuts import render, redirect
-from django.db.models import Q
-from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.models import User as AuthUser
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from .models import Product, Category, MusicTrack, UserProfile
+from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.models import User
+from .models import *
+from .serializers import *
+from rapidfuzz import process, fuzz
 
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-def get_music_tracks():
-    try:
-        return MusicTrack.objects.filter(is_active=True).order_by('order')
-    except Exception:
-        return []
+    def get_queryset(self):
+        queryset = Product.objects.filter(is_active=True)
+        
+        search_query = self.request.query_params.get('search')
+        gender = self.request.query_params.get('gender')
+        
+        if gender:
+            queryset = queryset.filter(gender=gender)
 
+        if search_query:
+            exact_match = queryset.filter(name__icontains=search_query)
+            
+            if exact_match.exists():
+                return exact_match
+            
+            all_products = list(queryset)
+            if not all_products:
+                return queryset
+                
+            product_names = [p.name for p in all_products]
+            
+            matches = process.extract(
+                search_query, 
+                product_names, 
+                scorer=fuzz.WRatio, 
+                limit=10, 
+                score_cutoff=60
+            )
+            
+            matched_names = [match[0] for match in matches]
+            
+            return queryset.filter(name__in=matched_names)
 
-def main_page(request):
-    products = Product.objects.filter(is_active=True)
+        return queryset
 
-    search_query = request.GET.get('search', '')
-    if search_query:
-        products = products.filter(
-            Q(name__icontains=search_query) |
-            Q(material__icontains=search_query) |
-            Q(color__icontains=search_query)
-        ).order_by('name')
+class SizeViewSet(viewsets.ModelViewSet):
+    queryset = Size.objects.all()
+    serializer_class = SizeSerializer
 
-    gender_filter = request.GET.get('gender', '')
-    if gender_filter:
-        products = products.filter(gender=gender_filter)
+class MusicTrackViewSet(viewsets.ModelViewSet):
+    queryset = MusicTrack.objects.filter(is_active=True)
+    serializer_class = MusicTrackSerializer
 
-    categories = Category.objects.all()
-    cart = request.session.get('cart', {})
-    cart_items_count = sum(cart.values())
+class RegisterView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email', '')
+        
+        if not username or not password:
+            return Response({'error': 'Введите логин и пароль'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Логин занят'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = User.objects.create_user(username=username, password=password, email=email)
+        Cart.objects.create(user=user)
+        return Response({'success': True}, status=status.HTTP_201_CREATED)
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return render(request, 'products_partial.html', {'products': products})
+class CartViewSet(viewsets.ModelViewSet):
+    serializer_class = CartSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-    context = {
-        'products': products,
-        'categories': categories,
-        'cart_items_count': cart_items_count,
-        'music_tracks': get_music_tracks(),
-    }
-    return render(request, 'home.html', context)
+    def get_queryset(self):
+        return Cart.objects.filter(user=self.request.user, is_active=True)
 
+    @action(detail=False, methods=['get'])
+    def my_cart(self, request):
+        cart, _ = Cart.objects.get_or_create(user=request.user, is_active=True)
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
 
-def cart_view(request):
-    cart = request.session.get('cart', {})
-    cart_items = []
-    total_price = 0
+    @action(detail=False, methods=['post'])
+    def add_item(self, request):
+        cart, _ = Cart.objects.get_or_create(user=request.user, is_active=True)
+        product_id = request.data.get('product_id')
+        size_id = request.data.get('size_id')
+        
+        item = CartItem.objects.filter(cart=cart, product_id=product_id, size_id=size_id).first()
+        if item:
+            item.quantity += 1
+            item.save()
+        else:
+            CartItem.objects.create(cart=cart, product_id=product_id, size_id=size_id, quantity=1)
+            
+        return Response({'status': 'ok'})
 
-    for product_id, quantity in cart.items():
-        try:
-            product = Product.objects.get(id=product_id, is_active=True)
-            item_total = product.price * quantity
-            cart_items.append({'product': product, 'quantity': quantity, 'total_price': item_total})
-            total_price += item_total
-        except Product.DoesNotExist:
-            continue
+    @action(detail=False, methods=['post'])
+    def clear_cart(self, request):
+        cart, _ = Cart.objects.get_or_create(user=request.user, is_active=True)
+        cart.items.all().delete()
+        return Response({'status': 'cleared'})
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        if request.GET.get('count_only'):
-            return JsonResponse({'cart_count': sum(cart.values())})
-        return render(request, 'cart_partial.html', {
-            'cart_items': cart_items,
-            'total_price': total_price,
-            'cart_items_count': sum(cart.values()),
+    @action(detail=True, methods=['post'])
+    def update_item(self, request, pk=None):
+        item = CartItem.objects.get(id=pk)
+        action_type = request.data.get('action')
+        if action_type == 'increase':
+            item.quantity += 1
+        elif action_type == 'decrease' and item.quantity > 1:
+            item.quantity -= 1
+        item.save()
+        return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['delete'])
+    def remove_item(self, request, pk=None):
+        CartItem.objects.filter(id=pk).delete()
+        return Response({'status': 'deleted'})
+    
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def create(self, request):
+        cart = Cart.objects.filter(user=request.user, is_active=True).first()
+        if not cart or not cart.items.exists():
+            return Response({'error': 'Корзина пуста'}, status=400)
+        
+        address_id = request.data.get('address_id')
+        payment_id = request.data.get('payment_id')
+        
+        order = Order.objects.create(
+            user=request.user,
+            address_id=address_id,
+            payment_method_id=payment_id,
+            cart=cart
+        )
+
+        cart.items.all().delete() 
+        return Response(OrderSerializer(order).data, status=201)
+    
+class AddressViewSet(viewsets.ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Address.objects.filter(user=self.request.user)
+
+class PaymentMethodViewSet(viewsets.ModelViewSet):
+    queryset = PaymentMethod.objects.all()
+    serializer_class = PaymentMethodSerializer
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        return Response({
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'phone': profile.phone,
+            'country': profile.country,
+            'city': profile.city,
+            'street': profile.street,
+            'apartment': profile.apartment,
         })
 
-    context = {
-        'cart_items': cart_items,
-        'total_price': total_price,
-        'cart_items_count': sum(cart.values()),
-        'music_tracks': get_music_tracks(),
-    }
-    return render(request, 'cart.html', context)
-
-
-def add_to_cart(request):
-    if request.method == 'POST':
-        product_id = request.POST.get('product_id')
-        try:
-            Product.objects.get(id=product_id, is_active=True)
-        except Product.DoesNotExist:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Товар не найден'})
-            return redirect('/')
-        cart = request.session.get('cart', {})
-        cart[product_id] = cart.get(product_id, 0) + 1
-        request.session['cart'] = cart
-
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
-    return redirect('/')
-
-
-def increase_cart_item(request, product_id):
-    cart = request.session.get('cart', {})
-    key = str(product_id)
-    if key in cart:
-        cart[key] += 1
-        request.session['cart'] = cart
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
-    return redirect('/cart/')
-
-
-def decrease_cart_item(request, product_id):
-    cart = request.session.get('cart', {})
-    key = str(product_id)
-    if key in cart:
-        if cart[key] > 1:
-            cart[key] -= 1
-        else:
-            del cart[key]
-        request.session['cart'] = cart
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
-    return redirect('/cart/')
-
-
-def remove_from_cart(request, product_id):
-    cart = request.session.get('cart', {})
-    key = str(product_id)
-    if key in cart:
-        del cart[key]
-        request.session['cart'] = cart
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True, 'cart_count': sum(cart.values())})
-    return redirect('/cart/')
-
-
-def clear_cart(request):
-    if 'cart' in request.session:
-        del request.session['cart']
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True, 'cart_count': 0})
-    return redirect('/cart/')
-
-
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('/profile/')
-
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '').strip()
-
-        if not username or not password:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Введите логин и пароль'})
-            messages.error(request, 'Введите логин и пароль')
-            return render(request, 'login.html', {'music_tracks': get_music_tracks()})
-
-        if username == 'admin' and password == 'admin':
-            admin_user, created = AuthUser.objects.get_or_create(username='admin')
-            if created or not admin_user.is_superuser:
-                admin_user.set_password('admin')
-                admin_user.is_staff = True
-                admin_user.is_superuser = True
-                admin_user.save()
-
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True})
-            return redirect('/profile/')
-        else:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Неверный логин или пароль'})
-            messages.error(request, 'Неверный логин или пароль')
-
-    return render(request, 'login.html', {'music_tracks': get_music_tracks()})
-
-
-def register_view(request):
-    if request.user.is_authenticated:
-        return redirect('/profile/')
-
-    if request.method == 'POST':
-        username   = request.POST.get('username', '').strip()
-        email      = request.POST.get('email', '').strip()
-        first_name = request.POST.get('first_name', '').strip()
-        last_name  = request.POST.get('last_name', '').strip()
-        phone      = request.POST.get('phone', '').strip()
-        password1  = request.POST.get('password1', '')
-        password2  = request.POST.get('password2', '')
-
-        error = None
-        if not username:
-            error = 'Введите логин'
-        elif not email:
-            error = 'Введите email'
-        elif not password1 or not password2:
-            error = 'Введите пароль'
-        elif password1 != password2:
-            error = 'Пароли не совпадают'
-        elif len(password1) < 4:
-            error = 'Пароль должен быть не менее 4 символов'
-        elif AuthUser.objects.filter(username=username).exists():
-            error = 'Пользователь с таким логином уже существует'
-        elif AuthUser.objects.filter(email=email).exists():
-            error = 'Email уже используется'
-
-        if error:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': error})
-            messages.error(request, error)
-        else:
-            user = AuthUser.objects.create_user(
-                username=username, email=email, password=password1,
-                first_name=first_name, last_name=last_name,
-            )
-            profile, _ = UserProfile.objects.get_or_create(user=user)
-            profile.phone = phone
-            profile.save()
-            login(request, user)
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True})
-            return redirect('/profile/')
-
-    return render(request, 'register.html', {'music_tracks': get_music_tracks()})
-
-
-@login_required(login_url='/login/')
-def profile_view(request):
-    cart = request.session.get('cart', {})
-    UserProfile.objects.get_or_create(user=request.user)
-    context = {
-        'cart_items_count': sum(cart.values()),
-        'music_tracks': get_music_tracks(),
-    }
-    return render(request, 'profile.html', context)
-
-
-@login_required(login_url='/login/')
-def profile_update(request):
-    if request.method != 'POST':
-        return redirect('/profile/')
-
-    user = request.user
-    first_name = request.POST.get('first_name', '').strip()
-    last_name  = request.POST.get('last_name', '').strip()
-    email      = request.POST.get('email', '').strip()
-    phone      = request.POST.get('phone', '').strip()
-    password1  = request.POST.get('password1', '')
-    password2  = request.POST.get('password2', '')
-
-    if email and AuthUser.objects.filter(email=email).exclude(pk=user.pk).exists():
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': 'Этот email уже используется'})
-        messages.error(request, 'Этот email уже используется')
-        return redirect('/profile/')
-
-    if password1:
-        if password1 != password2:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Пароли не совпадают'})
-            messages.error(request, 'Пароли не совпадают')
-            return redirect('/profile/')
-        if len(password1) < 4:
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'error': 'Пароль должен быть не менее 4 символов'})
-            messages.error(request, 'Пароль должен быть не менее 4 символов')
-            return redirect('/profile/')
-        user.set_password(password1)
-        update_session_auth_hash(request, user)
-
-    if first_name: user.first_name = first_name
-    if last_name:  user.last_name  = last_name
-    if email:      user.email      = email
-    user.save()
-
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    profile.phone = phone
-    profile.save()
-
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True})
-    messages.success(request, 'Профиль успешно обновлён!')
-    return redirect('/profile/')
-
-
-def logout_view(request):
-    logout(request)
-    return redirect('/')
+    def put(self, request):
+        user = request.user
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        data = request.data
+        
+        user.first_name = data.get('first_name', user.first_name)
+        user.last_name = data.get('last_name', user.last_name)
+        user.email = data.get('email', user.email)
+        
+        new_password = data.get('password')
+        if new_password:
+            user.set_password(new_password)
+        
+        user.save()
+        
+        profile.phone = data.get('phone', profile.phone)
+        profile.country = data.get('country', profile.country)
+        profile.city = data.get('city', profile.city)
+        profile.street = data.get('street', profile.street)
+        profile.apartment = data.get('apartment', profile.apartment)
+        profile.save()
+        
+        return Response({'success': True})

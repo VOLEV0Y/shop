@@ -1,10 +1,15 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from django.conf import settings
 
 class UserProfile(models.Model):
     user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='profile', verbose_name="Пользователь")
     phone = models.CharField(max_length=30, blank=True, verbose_name="Телефон")
+    country = models.CharField(max_length=100, blank=True, default='', verbose_name="Страна")
+    city = models.CharField(max_length=100, blank=True, default='', verbose_name="Город")
+    street = models.CharField(max_length=100, blank=True, default='', verbose_name="Улица")
+    apartment = models.CharField(max_length=20, blank=True, default='', verbose_name="Квартира")
 
     def __str__(self):
         return f"Профиль {self.user.username}"
@@ -117,13 +122,13 @@ class PaymentMethod(models.Model):
 
 
 class Cart(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
     is_active = models.BooleanField(default=True, verbose_name="Активная корзина")
 
     def __str__(self):
-        return f"Корзина {self.user.nickname}"
+        return f"Корзина {self.user.username}" 
 
     def total_price(self):
         total = Decimal(0)
@@ -167,7 +172,7 @@ class Order(models.Model):
         ('cancelled', 'Отменен'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь")
     address = models.ForeignKey(Address, on_delete=models.CASCADE, verbose_name="Адрес доставки")
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.CASCADE, verbose_name="Способ оплаты")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Статус")
@@ -178,7 +183,7 @@ class Order(models.Model):
     cart = models.OneToOneField(Cart, on_delete=models.CASCADE, verbose_name="Корзина", null=True, blank=True, related_name='order')
 
     def __str__(self):
-        return f"Заказ #{self.id} - {self.user.nickname}"
+        return f"Заказ #{self.id} - {self.user.username}" 
 
     def calculate_total(self):
         cart_items_total = Decimal(0)
