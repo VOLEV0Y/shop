@@ -98,12 +98,12 @@ class SizeProduct(models.Model):
 
 
 class Address(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses', verbose_name="Пользователь")
     name = models.TextField(verbose_name="Адрес")
     is_primary = models.BooleanField(default=False, verbose_name="Основной адрес")
 
     def __str__(self):
-        return f"{self.user.nickname} - {self.name}"
+        return f"{self.user.username} - {self.name}"
 
     class Meta:
         verbose_name = "Адрес"
@@ -192,7 +192,8 @@ class Order(models.Model):
         return cart_items_total + self.delivery_cost
 
     def save(self, *args, **kwargs):
-        self.total_price = self.calculate_total()
+        if self._state.adding or not self.total_price:
+            self.total_price = self.calculate_total()
         super().save(*args, **kwargs)
 
     class Meta:

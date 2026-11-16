@@ -45,7 +45,7 @@
 
       <div class="cart-actions">
         <button @click="clearCart" class="clear-cart-btn">Очистить корзину</button>
-        <button class="checkout-btn">ОФОРМИТЬ ЗАКАЗ</button>
+        <button class="checkout-btn" @click="$router.push('/checkout')">ОФОРМИТЬ ЗАКАЗ</button>
       </div>
     </div>
   </div>

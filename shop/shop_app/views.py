@@ -3,14 +3,24 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from .models import *
 from .serializers import *
+from django.contrib.auth.models import User
 from rapidfuzz import process, fuzz
+
+
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = Product.objects.filter(is_active=True)
@@ -50,10 +60,12 @@ class ProductViewSet(viewsets.ModelViewSet):
 class SizeViewSet(viewsets.ModelViewSet):
     queryset = Size.objects.all()
     serializer_class = SizeSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
 class MusicTrackViewSet(viewsets.ModelViewSet):
     queryset = MusicTrack.objects.filter(is_active=True)
     serializer_class = MusicTrackSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
 class RegisterView(APIView):
     def post(self, request):
@@ -106,7 +118,7 @@ class CartViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def update_item(self, request, pk=None):
-        item = CartItem.objects.get(id=pk)
+        item = get_object_or_404(CartItem, id=pk, cart__user=request.user, cart__is_active=True)
         action_type = request.data.get('action')
         if action_type == 'increase':
             item.quantity += 1
@@ -117,12 +129,13 @@ class CartViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['delete'])
     def remove_item(self, request, pk=None):
-        CartItem.objects.filter(id=pk).delete()
+        CartItem.objects.filter(id=pk, cart__user=request.user, cart__is_active=True).delete()
         return Response({'status': 'deleted'})
     
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'head', 'options']
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user).order_by('-created_at')
@@ -131,20 +144,25 @@ class OrderViewSet(viewsets.ModelViewSet):
         cart = Cart.objects.filter(user=request.user, is_active=True).first()
         if not cart or not cart.items.exists():
             return Response({'error': 'Корзина пуста'}, status=400)
-        
-        address_id = request.data.get('address_id')
-        payment_id = request.data.get('payment_id')
-        
+
+        address = Address.objects.filter(id=request.data.get('address_id'), user=request.user).first()
+        if not address:
+            return Response({'error': 'Выберите адрес доставки'}, status=400)
+        payment = PaymentMethod.objects.filter(id=request.data.get('payment_id')).first()
+        if not payment:
+            return Response({'error': 'Выберите способ оплаты'}, status=400)
+
         order = Order.objects.create(
             user=request.user,
-            address_id=address_id,
-            payment_method_id=payment_id,
+            address=address,
+            payment_method=payment,
             cart=cart
         )
 
-        cart.items.all().delete() 
+        cart.is_active = False
+        cart.save()
         return Response(OrderSerializer(order).data, status=201)
-    
+
 class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -152,9 +170,13 @@ class AddressViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Address.objects.filter(user=self.request.user)
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 class PaymentMethodViewSet(viewsets.ModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
+    permission_classes = [IsAdminOrReadOnly]
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
